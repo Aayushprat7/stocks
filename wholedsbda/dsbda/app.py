@@ -23,3 +23,14 @@ if __name__ == "__main__":
     # Render uses the PORT environment variable
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+
+return jsonify({
+    "prediction": int(prediction),
+    "chart": data['Close'].tail(25).values.flatten().tolist(),
+    "portfolio": 42850, # Placeholder or calculated
+    "profit": 12.5,     # Placeholder or calculated
+    "accuracy": 85.2,   # Placeholder or calculated
+    "risk": "Moderate",
+    "price": float(close.iloc[-1]),
+    "trend": float(data['Return'].iloc[-1] * 100)
+})
