@@ -8,20 +8,24 @@ CORS(app) # Allows your React app to talk to this API
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    data = request.json
-    if not data or 'stock' not in data:
-        return jsonify({"error": "Please provide a stock ticker"}), 400
-    
-   return jsonify({
-    "prediction": int(prediction),
-    "chart": data['Close'].tail(25).values.flatten().tolist(),
-    "portfolio": 42850, # Placeholder or calculated
-    "profit": 12.5,     # Placeholder or calculated
-    "accuracy": 85.2,   # Placeholder or calculated
-    "risk": "Moderate",
-    "price": float(close.iloc[-1]),
-    "trend": float(data['Return'].iloc[-1] * 100)
-})
+    try:
+        stock = request.json['stock']
+        # ... your existing data processing code ...
+
+        # Ensure this 'return' is aligned with the 'stock =' line above
+        return jsonify({
+            "prediction": int(prediction),
+            "chart": data['Close'].tail(25).values.flatten().tolist(),
+            "portfolio": 42850,
+            "profit": 12.5,
+            "accuracy": 85.2,
+            "risk": "Moderate",
+            "price": float(close.iloc[-1]),
+            "trend": float(data['Return'].iloc[-1] * 100)
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
 @app.route('/', methods=['GET'])
 def health_check():
     return jsonify({"status": "QuantCore Engine Online"})
