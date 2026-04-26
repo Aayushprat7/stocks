@@ -3,26 +3,30 @@ import pandas as pd
 from ta.momentum import RSIIndicator
 from ta.trend import MACD
 from sklearn.ensemble import RandomForestClassifier
+import numpy as np
 
 def get_prediction(stock_ticker):
     try:
-        # Download data (Updated to 2026 for your current timeline)
-        data = yf.download(stock_ticker, start="2020-01-01", end="2026-04-25")
+        # Download data up to today's date
+        data = yf.download(stock_ticker, start="2020-01-01", end="2026-04-26")
         
         if data.empty:
-            return {"error": "No data found for this ticker"}
+            return None, None
 
-        # Fix for yfinance Multi-index
+        # Handle yfinance multi-index if necessary
         close = data['Close'].squeeze()
 
         # Feature Engineering
         data['MA10'] = close.rolling(10).mean()
         data['MA50'] = close.rolling(50).mean()
+        
         rsi = RSIIndicator(close=close)
         data['RSI'] = rsi.rsi()
+        
         macd = MACD(close=close)
         data['MACD'] = macd.macd()
         data['MACD_signal'] = macd.macd_signal()
+        
         data['Return'] = close.pct_change()
 
         # Target: Will price go up tomorrow?
@@ -41,7 +45,9 @@ def get_prediction(stock_ticker):
         latest = X.iloc[-1:].values
         prediction = model.predict(latest)[0]
         
-        return {"prediction": int(prediction)}
+        # Return both signal and dataframe for app.py to process
+        return int(prediction), data
 
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Logic Error: {e}")
+        return None, None
