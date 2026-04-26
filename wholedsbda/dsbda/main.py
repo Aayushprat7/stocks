@@ -7,31 +7,38 @@ import numpy as np
 
 def get_prediction(stock_ticker):
     try:
-        # Download data up to today's date
-        data = yf.download(stock_ticker, start="2020-01-01", end="2026-04-26")
+        # Download data
+        data = yf.download(stock_ticker, start="2020-01-01", end="2026-04-26", auto_adjust=True)
         
         if data.empty:
             return None, None
 
-        # Handle yfinance multi-index if necessary
-        close = data['Close'].squeeze()
+        # FIX: Flatten Multi-Index columns if present
+        if isinstance(data.columns, pd.MultiIndex):
+            data.columns = data.columns.get_level_values(0)
+
+        # Ensure we have a clean Close series
+        close = data['Close']
 
         # Feature Engineering
         data['MA10'] = close.rolling(10).mean()
         data['MA50'] = close.rolling(50).mean()
         
-        rsi = RSIIndicator(close=close)
-        data['RSI'] = rsi.rsi()
+        rsi_gen = RSIIndicator(close=close)
+        data['RSI'] = rsi_gen.rsi()
         
-        macd = MACD(close=close)
-        data['MACD'] = macd.macd()
-        data['MACD_signal'] = macd.macd_signal()
+        macd_gen = MACD(close=close)
+        data['MACD'] = macd_gen.macd()
+        data['MACD_signal'] = macd_gen.macd_signal()
         
         data['Return'] = close.pct_change()
 
-        # Target: Will price go up tomorrow?
+        # Target and cleanup
         data['Target'] = (close.shift(-1) > close).astype(int)
-        data.dropna(inplace=True)
+        data = data.dropna()
+
+        if data.empty:
+            return None, None
 
         features = ['MA10', 'MA50', 'RSI', 'MACD', 'MACD_signal', 'Return']
         X = data[features]
@@ -41,13 +48,12 @@ def get_prediction(stock_ticker):
         model = RandomForestClassifier(n_estimators=100, random_state=42)
         model.fit(X, y)
 
-        # Predict latest
+        # Predict latest row
         latest = X.iloc[-1:].values
         prediction = model.predict(latest)[0]
         
-        # Return both signal and dataframe for app.py to process
         return int(prediction), data
 
     except Exception as e:
-        print(f"Logic Error: {e}")
+        print(f"Logic Error in main.py: {e}")
         return None, None
